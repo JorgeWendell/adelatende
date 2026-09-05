@@ -140,17 +140,38 @@ export async function setEvolutionWebhook(instanceName: string, url: string) {
   }
 }
 
+export async function restartEvolutionInstance(instanceName: string) {
+  try {
+    return await evoFetch(`/instance/restart/${encodeURIComponent(instanceName)}`, {
+      method: "PUT",
+    });
+  } catch {
+    return evoFetch(`/instance/restart/${encodeURIComponent(instanceName)}`);
+  }
+}
+
 export async function waitForQr(instanceName: string, seed?: unknown) {
-  let qr = extractQrBase64(seed);
+  let qr = await qrImageFromPayload(seed);
   if (qr) return qr;
 
-  for (let attempt = 0; attempt < 8; attempt++) {
+  for (let attempt = 0; attempt < 10; attempt++) {
     if (attempt > 0) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
+    if (attempt === 5) {
+      await restartEvolutionInstance(instanceName).catch(() => null);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
     const connected = await connectEvolutionInstance(instanceName);
-    qr = extractQrBase64(connected);
+    qr = await qrImageFromPayload(connected);
     if (qr) return qr;
+    if (attempt === 9) {
+      const keys =
+        connected && typeof connected === "object"
+          ? Object.keys(connected as object).join(", ")
+          : String(connected);
+      console.error(`[evolution] QR ausente em ${instanceName}. Chaves: ${keys}`);
+    }
   }
 
   return null;
@@ -194,8 +215,22 @@ function asQrImage(value: unknown): string | null {
   return null;
 }
 
+function asQrPayloadCode(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (trimmed.startsWith("2@") && trimmed.length > 20) return trimmed;
+  return null;
+}
+
 export function extractQrBase64(payload: unknown, depth = 0): string | null {
   if (payload == null || depth > 5) return null;
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const found = extractQrBase64(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
   const direct = asQrImage(payload);
   if (direct) return direct;
   if (typeof payload !== "object") return null;
@@ -206,6 +241,49 @@ export function extractQrBase64(payload: unknown, depth = 0): string | null {
     if (found) return found;
   }
   return null;
+}
+
+export function extractQrPayloadCode(payload: unknown): string | null {
+  const items = Array.isArray(payload) ? payload : [payload];
+  for (const item of items) {
+    if (!item || typeof item !== "object") {
+      const direct = asQrPayloadCode(item);
+      if (direct) return direct;
+      continue;
+    }
+    const obj = item as Record<string, unknown>;
+    const nested = (obj.qrcode ?? obj.qrCode ?? obj.data) as
+      | Record<string, unknown>
+      | string
+      | undefined;
+    const candidates = [
+      obj.code,
+      typeof nested === "string" ? nested : nested?.code,
+      typeof obj.data === "object" && obj.data
+        ? (obj.data as { qrcode?: { code?: string } }).qrcode?.code
+        : null,
+    ];
+    for (const value of candidates) {
+      const found = asQrPayloadCode(value);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+export async function qrImageFromPayload(payload: unknown): Promise<string | null> {
+  const image = extractQrBase64(payload);
+  if (image) return image;
+
+  const code = extractQrPayloadCode(payload);
+  if (!code) return null;
+
+  const QRCode = (await import("qrcode")).default;
+  return QRCode.toDataURL(code, {
+    width: 320,
+    margin: 1,
+    errorCorrectionLevel: "H",
+  });
 }
 
 export function extractConnectionState(payload: unknown): string {

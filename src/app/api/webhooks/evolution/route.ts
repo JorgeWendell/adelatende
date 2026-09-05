@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { waConnection, waQueue } from "@/db/schema";
 import {
   extractConnectionState,
-  extractQrBase64,
+  qrImageFromPayload,
 } from "@/lib/evolution";
 import { isGroupJid } from "@/lib/phone";
 import {
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (event.includes("qrcode")) {
-    const qr = extractQrBase64(payload);
+    const qr = await qrImageFromPayload(payload);
     await db
       .update(waConnection)
       .set({

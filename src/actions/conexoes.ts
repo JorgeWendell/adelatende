@@ -105,6 +105,11 @@ export const refreshQr = moduleAction("conexoes")
     if (!row) throw new ActionError("Conexão não encontrada.");
 
     const qr = await waitForQr(row.evolutionInstance);
+    if (!qr) {
+      throw new ActionError(
+        "A Evolution ainda não gerou o QR. Exclua a conexão, crie de novo e, se persistir, veja o log do container adelatende-evolution."
+      );
+    }
     await db
       .update(waConnection)
       .set({
