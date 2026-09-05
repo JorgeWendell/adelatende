@@ -14,29 +14,52 @@ function config(): EvolutionConfig {
   return { baseUrl, apiKey };
 }
 
+function evolutionUnreachable(baseUrl: string, error: unknown) {
+  const raw = error instanceof Error ? error.message : "";
+  return new Error(
+    raw && raw !== "fetch failed"
+      ? `Não foi possível falar com a Evolution API em ${baseUrl}: ${raw}`
+      : `Não foi possível falar com a Evolution API em ${baseUrl}. Confira se o container está no ar e se EVOLUTION_API_URL está correto (em Docker: http://evolution:8080).`
+  );
+}
+
 async function evoFetch<T>(
   path: string,
   init?: RequestInit
 ): Promise<T> {
   const { baseUrl, apiKey } = config();
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...init,
-    headers: {
-      apikey: apiKey,
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      ...init,
+      headers: {
+        apikey: apiKey,
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
+      cache: "no-store",
+    });
+  } catch (error) {
+    throw evolutionUnreachable(baseUrl, error);
+  }
 
   const text = await response.text();
-  const data = text ? (JSON.parse(text) as T & { message?: string; error?: string }) : ({} as T);
+  let data = {} as T & { message?: string; error?: string };
+  if (text) {
+    try {
+      data = JSON.parse(text) as T & { message?: string; error?: string };
+    } catch {
+      throw new Error(
+        response.ok
+          ? "A Evolution API devolveu uma resposta inválida."
+          : `Evolution API ${response.status}`
+      );
+    }
+  }
 
   if (!response.ok) {
     const message =
-      (data as { message?: string; error?: string }).message ||
-      (data as { error?: string }).error ||
-      `Evolution API ${response.status}`;
+      data.message || data.error || `Evolution API ${response.status}`;
     throw new Error(message);
   }
 

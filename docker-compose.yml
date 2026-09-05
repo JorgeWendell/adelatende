@@ -45,6 +45,11 @@ services:
     image: redis:7-alpine
     container_name: adelatende-redis
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - adelatende-network
 
@@ -53,16 +58,36 @@ services:
     container_name: adelatende-evolution
     restart: unless-stopped
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SERVER_URL: ${EVOLUTION_SERVER_URL:-https://wpp.adelweb.com.br}
+      SERVER_TYPE: http
       AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?Defina EVOLUTION_API_KEY no .env}
-      DATABASE_ENABLED: "false"
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${POSTGRES_USER:-adelatende}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-adelatende}?schema=evolution
+      DATABASE_CONNECTION_CLIENT_NAME: adelatende
+      DATABASE_SAVE_DATA_INSTANCE: "true"
       CACHE_REDIS_ENABLED: "true"
       CACHE_REDIS_URI: redis://redis:6379
       CACHE_REDIS_PREFIX_KEY: adelatende
       QRCODE_LIMIT: "30"
       DEL_INSTANCE: "false"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
     volumes:
       - evolution_store:/evolution/instances
     expose:
@@ -111,7 +136,7 @@ services:
       migrate:
         condition: service_completed_successfully
       evolution:
-        condition: service_started
+        condition: service_healthy
     networks:
       - adelatende-network
       - traefik
