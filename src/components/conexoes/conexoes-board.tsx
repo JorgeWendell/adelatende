@@ -56,9 +56,34 @@ export function ConexoesBoard() {
       toast.error(result.serverError);
       return;
     }
-    setRows((result.data?.connections as Connection[]) ?? []);
+    const connections = (result.data?.connections as Connection[]) ?? [];
+    setRows(connections);
     setQueues((result.data?.queues as Queue[]) ?? []);
+    setQrFor((current) => {
+      if (!current) return current;
+      const updated = connections.find((item) => item.id === current.id);
+      if (!updated) return current;
+      return {
+        ...current,
+        qrCode: updated.qrCode ?? current.qrCode,
+        status: updated.status,
+      };
+    });
   }, []);
+
+  useEffect(() => {
+    if (qrFor?.status !== "open") return;
+    toast.success("WhatsApp conectado.");
+    setQrFor(null);
+  }, [qrFor?.status]);
+
+  useEffect(() => {
+    if (!qrFor || qrFor.qrCode || qrFor.status === "open") return;
+    const timer = window.setTimeout(() => {
+      void handleRefreshQr(qrFor);
+    }, 2000);
+    return () => window.clearTimeout(timer);
+  }, [qrFor?.id, qrFor?.qrCode, qrFor?.status]);
 
   useEffect(() => {
     void load();
@@ -86,7 +111,12 @@ export function ConexoesBoard() {
     const created = (await listConexoes()).data?.connections.find(
       (item) => item.id === result.data?.id
     );
-    if (created) setQrFor(created as Connection);
+    if (created) {
+      setQrFor({
+        ...(created as Connection),
+        qrCode: result.data?.qrCode ?? (created as Connection).qrCode,
+      });
+    }
   }
 
   async function handleRefreshQr(row: Connection) {
@@ -327,8 +357,9 @@ export function ConexoesBoard() {
                 className="size-64 rounded-xl border bg-white p-2"
               />
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Gerando QR Code...
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Gerando QR Code... se demorar, clique em Atualizar QR.
               </p>
             )}
             <Button

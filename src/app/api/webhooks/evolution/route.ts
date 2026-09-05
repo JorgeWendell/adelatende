@@ -28,10 +28,16 @@ function instanceName(payload: Record<string, unknown>) {
   const instance = payload.instance;
   if (typeof instance === "string") return instance;
   if (instance && typeof instance === "object") {
-    const name = (instance as { instanceName?: string }).instanceName;
+    const name = (instance as { instanceName?: string; name?: string })
+      .instanceName;
     if (name) return name;
+    const alt = (instance as { name?: string }).name;
+    if (alt) return alt;
   }
-  return String(payload.instanceName ?? "");
+  const data = payload.data as { instance?: string; instanceName?: string } | undefined;
+  return String(
+    payload.instanceName ?? data?.instanceName ?? data?.instance ?? ""
+  );
 }
 
 function messageParts(data: Record<string, unknown>) {

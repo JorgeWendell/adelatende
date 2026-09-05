@@ -6,13 +6,12 @@ import { z } from "zod";
 import { db } from "@/db";
 import { waConnection, waQueue } from "@/db/schema";
 import {
-  connectEvolutionInstance,
   createEvolutionInstance,
   deleteEvolutionInstance,
-  extractQrBase64,
   instanceNameFor,
   logoutEvolutionInstance,
   setEvolutionWebhook,
+  waitForQr,
   webhookUrl,
 } from "@/lib/evolution";
 import { ActionError, moduleAction } from "@/lib/safe-action";
@@ -57,13 +56,15 @@ export const createConexao = moduleAction("conexoes", "gestor")
     });
 
     try {
-      await createEvolutionInstance(evolutionInstance);
       const hook = webhookUrl();
+      const created = await createEvolutionInstance(
+        evolutionInstance,
+        hook || undefined
+      );
       if (hook) {
-        await setEvolutionWebhook(evolutionInstance, hook);
+        await setEvolutionWebhook(evolutionInstance, hook).catch(() => null);
       }
-      const connected = await connectEvolutionInstance(evolutionInstance);
-      const qr = extractQrBase64(connected);
+      const qr = await waitForQr(evolutionInstance, created);
       if (qr) {
         await db
           .update(waConnection)
@@ -79,7 +80,13 @@ export const createConexao = moduleAction("conexoes", "gestor")
       );
     }
 
-    return { id };
+    const [row] = await db
+      .select({ qrCode: waConnection.qrCode })
+      .from(waConnection)
+      .where(eq(waConnection.id, id))
+      .limit(1);
+
+    return { id, qrCode: row?.qrCode ?? null };
   });
 
 export const refreshQr = moduleAction("conexoes")
@@ -97,8 +104,7 @@ export const refreshQr = moduleAction("conexoes")
       .limit(1);
     if (!row) throw new ActionError("Conexão não encontrada.");
 
-    const connected = await connectEvolutionInstance(row.evolutionInstance);
-    const qr = extractQrBase64(connected);
+    const qr = await waitForQr(row.evolutionInstance);
     await db
       .update(waConnection)
       .set({

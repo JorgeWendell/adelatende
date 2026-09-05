@@ -70,13 +70,29 @@ export function instanceNameFor(organizationId: string, connectionId: string) {
   return `atende_${organizationId.slice(0, 8)}_${connectionId.slice(0, 8)}`;
 }
 
-export async function createEvolutionInstance(instanceName: string) {
+function webhookPayload(url: string) {
+  const secret = process.env.EVOLUTION_WEBHOOK_SECRET;
+  return {
+    enabled: true,
+    url,
+    byEvents: false,
+    base64: true,
+    events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT"],
+    ...(secret ? { headers: { "x-webhook-secret": secret } } : {}),
+  };
+}
+
+export async function createEvolutionInstance(
+  instanceName: string,
+  webhook?: string
+) {
   return evoFetch<Record<string, unknown>>("/instance/create", {
     method: "POST",
     body: JSON.stringify({
       instanceName,
       qrcode: true,
       integration: "WHATSAPP-BAILEYS",
+      ...(webhook ? { webhook: webhookPayload(webhook) } : {}),
     }),
   });
 }
@@ -106,22 +122,10 @@ export async function deleteEvolutionInstance(instanceName: string) {
 }
 
 export async function setEvolutionWebhook(instanceName: string, url: string) {
-  const secret = process.env.EVOLUTION_WEBHOOK_SECRET;
-  const payload = {
-    webhook: {
-      enabled: true,
-      url,
-      webhookByEvents: false,
-      webhookBase64: true,
-      events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT"],
-      ...(secret ? { headers: { "x-webhook-secret": secret } } : {}),
-    },
-  };
-
   try {
     return await evoFetch(`/webhook/set/${encodeURIComponent(instanceName)}`, {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ webhook: webhookPayload(url) }),
     });
   } catch {
     return evoFetch(`/webhook/set/${encodeURIComponent(instanceName)}`, {
@@ -134,6 +138,22 @@ export async function setEvolutionWebhook(instanceName: string, url: string) {
       }),
     });
   }
+}
+
+export async function waitForQr(instanceName: string, seed?: unknown) {
+  let qr = extractQrBase64(seed);
+  if (qr) return qr;
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    const connected = await connectEvolutionInstance(instanceName);
+    qr = extractQrBase64(connected);
+    if (qr) return qr;
+  }
+
+  return null;
 }
 
 export async function sendEvolutionText(
@@ -164,21 +184,26 @@ export async function sendEvolutionMedia(
   );
 }
 
-export function extractQrBase64(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null;
+function asQrImage(value: unknown): string | null {
+  if (typeof value !== "string" || value.length < 40) return null;
+  const trimmed = value.trim();
+  if (trimmed.startsWith("data:image")) return trimmed;
+  if (trimmed.startsWith("iVBORw0KGgo") || trimmed.startsWith("/9j/")) {
+    return `data:image/png;base64,${trimmed}`;
+  }
+  return null;
+}
+
+export function extractQrBase64(payload: unknown, depth = 0): string | null {
+  if (payload == null || depth > 5) return null;
+  const direct = asQrImage(payload);
+  if (direct) return direct;
+  if (typeof payload !== "object") return null;
+
   const data = payload as Record<string, unknown>;
-  const qrcode = data.qrcode as Record<string, unknown> | undefined;
-  const nested = data.data as Record<string, unknown> | undefined;
-  const candidates = [
-    data.base64,
-    qrcode?.base64,
-    nested?.base64,
-    (nested?.qrcode as Record<string, unknown> | undefined)?.base64,
-  ];
-  for (const item of candidates) {
-    if (typeof item === "string" && item.length > 20) {
-      return item.startsWith("data:") ? item : `data:image/png;base64,${item}`;
-    }
+  for (const key of ["base64", "qrcode", "qrCode", "qr", "data"]) {
+    const found = extractQrBase64(data[key], depth + 1);
+    if (found) return found;
   }
   return null;
 }
