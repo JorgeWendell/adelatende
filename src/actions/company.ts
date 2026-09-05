@@ -110,5 +110,10 @@ export const createCompany = protectedAction
       throw new ActionError("Não foi possível criar a empresa.");
     }
 
+    await auth.api.setActiveOrganization({
+      body: { organizationId: created.id },
+      headers: await headers(),
+    });
+
     return { status: "created" as const };
   });

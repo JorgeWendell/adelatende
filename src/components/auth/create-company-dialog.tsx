@@ -49,32 +49,36 @@ export function CreateCompanyDialog({
     setPending(true);
     setError(null);
 
-    const result = await createCompany({
-      name,
-      tradeName: tradeName || undefined,
-      document: document || undefined,
-      phone: phone || undefined,
-    });
+    try {
+      const result = await createCompany({
+        name,
+        tradeName: tradeName || undefined,
+        document: document || undefined,
+        phone: phone || undefined,
+      });
 
-    setPending(false);
+      if (result.serverError) {
+        setError(result.serverError);
+        return;
+      }
 
-    if (result.serverError) {
-      setError(result.serverError);
-      return;
+      if (result.validationErrors) {
+        setError("Revise os dados da empresa.");
+        return;
+      }
+
+      toast.success(
+        result.data?.status === "joined"
+          ? "Você entrou na empresa do seu domínio."
+          : "Empresa criada com sucesso."
+      );
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Não foi possível criar a empresa. Tente novamente.");
+    } finally {
+      setPending(false);
     }
-
-    if (result.validationErrors) {
-      setError("Revise os dados da empresa.");
-      return;
-    }
-
-    toast.success(
-      result.data?.status === "joined"
-        ? "Você entrou na empresa do seu domínio."
-        : "Empresa criada com sucesso."
-    );
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (

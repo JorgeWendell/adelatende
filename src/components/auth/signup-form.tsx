@@ -2,10 +2,10 @@
 
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { CreateCompanyDialog } from "@/components/auth/create-company-dialog";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,16 +17,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth-client";
-import { getEmailDomain } from "@/lib/email-domain";
 
 export function SignupForm() {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [companyOpen, setCompanyOpen] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,7 +47,8 @@ export function SignupForm() {
       {
         onSuccess() {
           setPending(false);
-          setCompanyOpen(true);
+          router.push("/onboarding");
+          router.refresh();
         },
         onError(ctx) {
           setPending(false);
@@ -65,8 +65,7 @@ export function SignupForm() {
   }
 
   return (
-    <>
-      <div className="flex w-full max-w-md flex-col gap-8">
+    <div className="flex w-full max-w-md flex-col gap-8">
         <div className="lg:hidden">
           <BrandLogo className="h-24 w-80" priority />
         </div>
@@ -138,12 +137,6 @@ export function SignupForm() {
             Entrar
           </Link>
         </p>
-      </div>
-      <CreateCompanyDialog
-        open={companyOpen}
-        email={email}
-        domain={getEmailDomain(email)}
-      />
-    </>
+    </div>
   );
 }
