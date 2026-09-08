@@ -109,7 +109,7 @@ export function ConexoesBoard() {
     setQueueId("");
     await load();
     const created = (await listConexoes()).data?.connections.find(
-      (item) => item.id === result.data?.id
+      (item) => item.id === result.data?.id,
     );
     if (created) {
       setQrFor({
@@ -135,7 +135,7 @@ export function ConexoesBoard() {
         <div>
           <h1 className="font-heading text-2xl tracking-tight">Conexões</h1>
           <p className="text-sm text-muted-foreground">
-            Pareie números WhatsApp pela Evolution API.
+            Pareie números WhatsApp.
           </p>
         </div>
         <Button className="h-9 px-3" onClick={() => setCreating(true)}>
@@ -165,7 +165,9 @@ export function ConexoesBoard() {
                   <div>
                     <p className="font-medium">{row.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {row.phone ? formatPhone(row.phone) : "Número ainda não pareado"}
+                      {row.phone
+                        ? formatPhone(row.phone)
+                        : "Número ainda não pareado"}
                     </p>
                   </div>
                   <Badge variant={open ? "secondary" : "outline"}>
@@ -174,7 +176,11 @@ export function ConexoesBoard() {
                     ) : (
                       <WifiOff className="size-3.5" />
                     )}
-                    {open ? "Conectado" : row.status === "connecting" ? "Pareando" : "Desconectado"}
+                    {open
+                      ? "Conectado"
+                      : row.status === "connecting"
+                        ? "Pareando"
+                        : "Desconectado"}
                   </Badge>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -275,7 +281,10 @@ export function ConexoesBoard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(editFor)} onOpenChange={(next) => !next && setEditFor(null)}>
+      <Dialog
+        open={Boolean(editFor)}
+        onOpenChange={(next) => !next && setEditFor(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar conexão</DialogTitle>
@@ -339,7 +348,10 @@ export function ConexoesBoard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(qrFor)} onOpenChange={(next) => !next && setQrFor(null)}>
+      <Dialog
+        open={Boolean(qrFor)}
+        onOpenChange={(next) => !next && setQrFor(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Parear {qrFor?.name}</DialogTitle>
