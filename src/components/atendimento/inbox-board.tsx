@@ -327,10 +327,14 @@ export function InboxBoard() {
                     variant="outline"
                     className="h-8 px-2"
                     onClick={async () => {
-                      await setConversaStatus({
+                      const result = await setConversaStatus({
                         conversationId: active.id,
                         status: "open",
                       });
+                      if (result.serverError) {
+                        toast.error(result.serverError);
+                        return;
+                      }
                       setTab("open");
                       await Promise.all([loadList(), loadThread(active.id)]);
                     }}

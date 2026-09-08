@@ -149,6 +149,58 @@ export const setConversaStatus = moduleAction("atendimento")
           ? null
           : undefined;
 
+    if (parsedInput.status === "open") {
+      const [conversation] = await db
+        .select({
+          id: waConversation.id,
+          contactJid: waContact.jid,
+          instance: waConnection.evolutionInstance,
+        })
+        .from(waConversation)
+        .innerJoin(waContact, eq(waConversation.contactId, waContact.id))
+        .innerJoin(waConnection, eq(waConversation.connectionId, waConnection.id))
+        .where(
+          and(
+            eq(waConversation.id, parsedInput.conversationId),
+            eq(waConversation.organizationId, ctx.organizationId)
+          )
+        )
+        .limit(1);
+
+      if (!conversation) {
+        throw new ActionError("Conversa não encontrada.");
+      }
+
+      const agentName =
+        ctx.session.user.name?.trim().split(/\s+/)[0] || "atendente";
+      const greeting = `Ola me chamo ${agentName}, vou dar andamento a sua solicitação.`;
+      const number = phoneFromJid(conversation.contactJid);
+
+      await sendEvolutionText(conversation.instance, number, greeting);
+      await insertMessage({
+        organizationId: ctx.organizationId,
+        conversationId: conversation.id,
+        direction: "out",
+        type: "text",
+        body: greeting,
+        fromMe: true,
+      });
+
+      await db
+        .update(waConversation)
+        .set({
+          status: "open",
+          assignedUserId,
+          lastMessageAt: new Date(),
+          lastMessagePreview: previewFromBody(greeting, "text"),
+          unreadCount: 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(waConversation.id, conversation.id));
+
+      return { ok: true };
+    }
+
     await db
       .update(waConversation)
       .set({

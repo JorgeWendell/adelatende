@@ -135,3 +135,29 @@ export const openContatoChat = moduleAction("contatos")
     });
     return { conversationId: id };
   });
+
+export const deleteContato = moduleAction("contatos")
+  .inputSchema(z.object({ id: z.string() }))
+  .action(async ({ parsedInput, ctx }) => {
+    const [contact] = await db
+      .select({ id: waContact.id })
+      .from(waContact)
+      .where(
+        and(
+          eq(waContact.id, parsedInput.id),
+          eq(waContact.organizationId, ctx.organizationId)
+        )
+      )
+      .limit(1);
+    if (!contact) throw new ActionError("Contato não encontrado.");
+
+    await db
+      .delete(waContact)
+      .where(
+        and(
+          eq(waContact.id, contact.id),
+          eq(waContact.organizationId, ctx.organizationId)
+        )
+      );
+    return { ok: true };
+  });

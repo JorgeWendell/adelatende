@@ -1,12 +1,12 @@
 "use client";
 
-import { Loader2, MessageCircle, Pencil, Plus } from "lucide-react";
+import { Loader2, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { listConexoes } from "@/actions/conexoes";
-import { listContatos, openContatoChat, saveContato } from "@/actions/contatos";
+import { listContatos, deleteContato, openContatoChat, saveContato } from "@/actions/contatos";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,6 +36,8 @@ export function ContatosBoard() {
   const [modal, setModal] = useState<Partial<Contact> | null>(null);
   const [saving, setSaving] = useState(false);
   const [chatFor, setChatFor] = useState<Contact | null>(null);
+  const [deleteFor, setDeleteFor] = useState<Contact | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [connectionId, setConnectionId] = useState("");
   const [connections, setConnections] = useState<{ id: string; name: string }[]>([]);
 
@@ -113,6 +115,13 @@ export function ContatosBoard() {
                   onClick={() => setModal(row)}
                 >
                   <Pencil />
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="h-8 px-2"
+                  onClick={() => setDeleteFor(row)}
+                >
+                  <Trash2 />
                 </Button>
                 <Button className="h-8 px-2" onClick={() => setChatFor(row)}>
                   <MessageCircle />
@@ -192,6 +201,48 @@ export function ContatosBoard() {
               </DialogFooter>
             </form>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(deleteFor)} onOpenChange={(next) => !next && setDeleteFor(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir contato</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Excluir {deleteFor?.name}? As conversas desse contato também saem do
+            atendimento.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="h-9 px-4"
+              onClick={() => setDeleteFor(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-9 px-4"
+              disabled={deleting}
+              onClick={async () => {
+                if (!deleteFor) return;
+                setDeleting(true);
+                const result = await deleteContato({ id: deleteFor.id });
+                setDeleting(false);
+                if (result.serverError) {
+                  toast.error(result.serverError);
+                  return;
+                }
+                toast.success("Contato excluído.");
+                setDeleteFor(null);
+                await load();
+              }}
+            >
+              {deleting ? <Loader2 className="animate-spin" /> : null}
+              Excluir
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
