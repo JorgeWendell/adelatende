@@ -65,13 +65,18 @@ export const createConexao = moduleAction("conexoes", "gestor")
         await setEvolutionWebhook(evolutionInstance, hook).catch(() => null);
       }
       const qr = await waitForQr(evolutionInstance, created);
-      if (qr) {
-        await db
-          .update(waConnection)
-          .set({ qrCode: qr, updatedAt: new Date() })
-          .where(eq(waConnection.id, id));
+      if (!qr) {
+        await deleteEvolutionInstance(evolutionInstance).catch(() => null);
+        throw new ActionError(
+          "A Evolution não gerou o QR. Suba a API na v2.3.7 e tente de novo."
+        );
       }
+      await db
+        .update(waConnection)
+        .set({ qrCode: qr, updatedAt: new Date() })
+        .where(eq(waConnection.id, id));
     } catch (error) {
+      await deleteEvolutionInstance(evolutionInstance).catch(() => null);
       await db.delete(waConnection).where(eq(waConnection.id, id));
       throw new ActionError(
         error instanceof Error

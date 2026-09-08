@@ -59,7 +59,19 @@ async function evoFetch<T>(
 
   if (!response.ok) {
     const message =
-      data.message || data.error || `Evolution API ${response.status}`;
+      (typeof data.message === "string" && data.message) ||
+      (Array.isArray(data.message) ? String(data.message[0]) : "") ||
+      (typeof data.error === "string" && data.error) ||
+      `Evolution API ${response.status}`;
+    throw new Error(message);
+  }
+
+  const failed = data as { error?: unknown; message?: unknown };
+  if (failed.error === true) {
+    const message =
+      (typeof failed.message === "string" && failed.message) ||
+      (Array.isArray(failed.message) ? String(failed.message[0]) : "") ||
+      "Erro na Evolution API.";
     throw new Error(message);
   }
 

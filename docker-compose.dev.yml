@@ -28,8 +28,11 @@ services:
       retries: 10
 
   evolution:
-    image: evoapicloud/evolution-api:v2.2.3
+    image: evoapicloud/evolution-api:v2.3.7
     restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,6 +53,9 @@ services:
       CACHE_REDIS_URI: redis://redis:6379
       CACHE_REDIS_PREFIX_KEY: evolution
       QRCODE_LIMIT: "30"
+      NODE_OPTIONS: --dns-result-order=ipv4first
+      CONFIG_SESSION_PHONE_CLIENT: AdelAtende
+      CONFIG_SESSION_PHONE_NAME: Chrome
     volumes:
       - evolution_store_dev:/evolution/instances
     healthcheck:

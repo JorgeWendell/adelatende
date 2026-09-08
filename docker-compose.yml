@@ -54,9 +54,12 @@ services:
       - adelatende-network
 
   evolution:
-    image: evoapicloud/evolution-api:v2.2.3
+    image: evoapicloud/evolution-api:v2.3.7
     container_name: adelatende-evolution
     restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     depends_on:
       db:
         condition: service_healthy
@@ -76,6 +79,9 @@ services:
       CACHE_REDIS_PREFIX_KEY: adelatende
       QRCODE_LIMIT: "30"
       DEL_INSTANCE: "false"
+      NODE_OPTIONS: --dns-result-order=ipv4first
+      CONFIG_SESSION_PHONE_CLIENT: AdelAtende
+      CONFIG_SESSION_PHONE_NAME: Chrome
     healthcheck:
       test:
         [
