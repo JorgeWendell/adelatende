@@ -297,6 +297,11 @@ export function InboxBoard() {
                     </span>
                   ) : null}
                 </div>
+                {!item.isGroup ? (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {formatPhone(item.contactPhone || item.contactJid)}
+                  </p>
+                ) : null}
                 <p className="truncate text-xs text-muted-foreground">
                   {item.lastMessagePreview || "Sem mensagens"}
                 </p>
