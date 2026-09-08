@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import {
+  member,
   user,
   waConnection,
   waContact,
@@ -215,6 +216,76 @@ export const setConversaStatus = moduleAction("atendimento")
         )
       );
     return { ok: true };
+  });
+
+export const listAtendentes = moduleAction("atendimento").action(
+  async ({ ctx }) => {
+    const rows = await db
+      .select({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+      })
+      .from(member)
+      .innerJoin(user, eq(member.userId, user.id))
+      .where(eq(member.organizationId, ctx.organizationId))
+      .orderBy(user.name);
+
+    return rows.filter((row) => row.userId !== ctx.session.user.id);
+  }
+);
+
+export const transferConversa = moduleAction("atendimento")
+  .inputSchema(
+    z.object({
+      conversationId: z.string(),
+      userId: z.string(),
+    })
+  )
+  .action(async ({ parsedInput, ctx }) => {
+    if (parsedInput.userId === ctx.session.user.id) {
+      throw new ActionError("Escolha outro usuário.");
+    }
+
+    const [target] = await db
+      .select({ userId: user.id, name: user.name })
+      .from(member)
+      .innerJoin(user, eq(member.userId, user.id))
+      .where(
+        and(
+          eq(member.organizationId, ctx.organizationId),
+          eq(member.userId, parsedInput.userId)
+        )
+      )
+      .limit(1);
+    if (!target) {
+      throw new ActionError("Usuário não encontrado na empresa.");
+    }
+
+    const [conversation] = await db
+      .select({ id: waConversation.id })
+      .from(waConversation)
+      .where(
+        and(
+          eq(waConversation.id, parsedInput.conversationId),
+          eq(waConversation.organizationId, ctx.organizationId)
+        )
+      )
+      .limit(1);
+    if (!conversation) {
+      throw new ActionError("Conversa não encontrada.");
+    }
+
+    await db
+      .update(waConversation)
+      .set({
+        status: "open",
+        assignedUserId: target.userId,
+        updatedAt: new Date(),
+      })
+      .where(eq(waConversation.id, conversation.id));
+
+    return { ok: true, assignedName: target.name };
   });
 
 export const sendMensagem = moduleAction("atendimento")

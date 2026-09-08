@@ -2,6 +2,7 @@
 
 import {
   CheckCheck,
+  Forward,
   Loader2,
   Paperclip,
   RotateCcw,
@@ -14,12 +15,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
+  listAtendentes,
   listConversas,
   listMensagens,
   listQuickReplies,
   sendMensagem,
   setConversaStatus,
   startConversa,
+  transferConversa,
 } from "@/actions/atendimento";
 import { Button } from "@/components/ui/button";
 import {
@@ -101,6 +104,12 @@ export function InboxBoard() {
   const [newOpen, setNewOpen] = useState(false);
   const [newPhone, setNewPhone] = useState("");
   const [newName, setNewName] = useState("");
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferUserId, setTransferUserId] = useState("");
+  const [transferring, setTransferring] = useState(false);
+  const [atendentes, setAtendentes] = useState<
+    { userId: string; name: string; email: string }[]
+  >([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadList = useCallback(async () => {
@@ -132,6 +141,12 @@ export function InboxBoard() {
     const timer = setInterval(() => void loadList(), 3000);
     return () => clearInterval(timer);
   }, [loadList]);
+
+  useEffect(() => {
+    void listAtendentes().then((result) => {
+      setAtendentes(result.data ?? []);
+    });
+  }, []);
 
   useEffect(() => {
     void listQuickReplies().then((result) => {
@@ -343,6 +358,7 @@ export function InboxBoard() {
                     Assumir
                   </Button>
                 ) : (
+                  <>
                   <Button
                     variant="outline"
                     className="h-8 px-2"
@@ -358,6 +374,19 @@ export function InboxBoard() {
                     <RotateCcw />
                     Devolver
                   </Button>
+                  <Button
+                    variant="outline"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      setTransferUserId(atendentes[0]?.userId ?? "");
+                      setTransferOpen(true);
+                    }}
+                    disabled={atendentes.length === 0}
+                  >
+                    <Forward />
+                    Transferir
+                  </Button>
+                  </>
                 )}
                 <Button
                   variant="destructive"
@@ -554,6 +583,67 @@ export function InboxBoard() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transferir atendimento</DialogTitle>
+          </DialogHeader>
+          {atendentes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Não há outro usuário na empresa para receber este atendimento.
+            </p>
+          ) : (
+            <form
+              className="grid gap-3"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (!active || !transferUserId) return;
+                setTransferring(true);
+                const result = await transferConversa({
+                  conversationId: active.id,
+                  userId: transferUserId,
+                });
+                setTransferring(false);
+                if (result.serverError) {
+                  toast.error(result.serverError);
+                  return;
+                }
+                const dest = atendentes.find((item) => item.userId === transferUserId);
+                toast.success(
+                  `Atendimento enviado para ${dest?.name || "o outro usuário"}.`
+                );
+                setTransferOpen(false);
+                setActiveId(null);
+                setActive(null);
+                await loadList();
+              }}
+            >
+              <Field>
+                <FieldLabel>Usuário</FieldLabel>
+                <NativeSelect
+                  className="h-9"
+                  value={transferUserId}
+                  onChange={(event) => setTransferUserId(event.target.value)}
+                  required
+                >
+                  {atendentes.map((item) => (
+                    <option key={item.userId} value={item.userId}>
+                      {item.name} ({item.email})
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <DialogFooter>
+                <Button type="submit" disabled={transferring} className="h-9 px-4">
+                  {transferring ? <Loader2 className="animate-spin" /> : null}
+                  Transferir
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>
