@@ -2,6 +2,7 @@
 
 import {
   CheckCheck,
+  ChevronLeft,
   Forward,
   Loader2,
   Paperclip,
@@ -229,8 +230,13 @@ export function InboxBoard() {
   }
 
   return (
-    <div className="grid h-[calc(100svh-3.5rem)] min-h-[520px] overflow-hidden border-t bg-background lg:h-[calc(100svh-4rem)] lg:grid-cols-[20rem_minmax(0,1fr)_18rem]">
-      <section className="flex min-h-0 flex-col border-r">
+    <div className="grid h-full min-h-0 overflow-hidden bg-background lg:grid-cols-[20rem_minmax(0,1fr)_18rem]">
+      <section
+        className={cn(
+          "min-h-0 flex-col border-r",
+          activeId ? "hidden lg:flex" : "flex"
+        )}
+      >
         <div className="flex items-center gap-2 border-b p-2">
           {connections.length > 1 ? (
             <NativeSelect
@@ -326,17 +332,37 @@ export function InboxBoard() {
         </ScrollArea>
       </section>
 
-      <section className="flex min-h-0 flex-col">
+      <section
+        className={cn(
+          "min-h-0 flex-col",
+          activeId ? "flex" : "hidden lg:flex"
+        )}
+      >
         {active ? (
           <>
-            <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
-              <div>
-                <p className="font-medium">{active.contactName}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatPhone(active.contactPhone)} · {active.connectionName}
-                </p>
+            <div className="flex items-start justify-between gap-2 border-b px-2 py-2 sm:px-4 sm:py-3">
+              <div className="flex min-w-0 items-center gap-0.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden"
+                  onClick={() => {
+                    setActiveId(null);
+                    setActive(null);
+                    router.replace("/atendimento");
+                  }}
+                >
+                  <ChevronLeft />
+                </Button>
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{active.contactName}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {formatPhone(active.contactPhone)} · {active.connectionName}
+                  </p>
+                </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex shrink-0 flex-wrap justify-end gap-1">
                 {active.status !== "open" ? (
                   <Button
                     variant="outline"
@@ -402,6 +428,7 @@ export function InboxBoard() {
                     }
                     setActiveId(null);
                     setActive(null);
+                    router.replace("/atendimento");
                     await loadList();
                   }}
                 >
@@ -430,7 +457,7 @@ export function InboxBoard() {
                 </div>
               </ScrollArea>
             </div>
-            <form onSubmit={handleSend} className="border-t p-3">
+            <form onSubmit={handleSend} className="shrink-0 border-t p-3">
               <div className="flex items-end gap-2">
                 <label className="grid size-9 place-items-center rounded-lg border text-muted-foreground">
                   <Paperclip className="size-4" />

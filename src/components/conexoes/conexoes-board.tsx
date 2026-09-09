@@ -131,7 +131,7 @@ export function ConexoesBoard() {
 
   return (
     <div className="mx-auto grid max-w-5xl gap-5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-heading text-2xl tracking-tight">Conexões</h1>
           <p className="text-sm text-muted-foreground">

@@ -56,7 +56,7 @@ export function RelatoriosBoard() {
             Mensagens e tickets no período selecionado.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Input
             type="date"
             className="h-9"

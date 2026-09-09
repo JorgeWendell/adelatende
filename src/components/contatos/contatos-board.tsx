@@ -65,20 +65,20 @@ export function ContatosBoard() {
 
   return (
     <div className="mx-auto grid max-w-5xl gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-2xl tracking-tight">Contatos</h1>
-          <p className="text-sm text-muted-foreground">
-            Agenda do WhatsApp e cadastro manual.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            className="h-9 w-56"
-            placeholder="Buscar"
-            value={q}
-            onChange={(event) => setQ(event.target.value)}
-          />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="font-heading text-2xl tracking-tight">Contatos</h1>
+            <p className="text-sm text-muted-foreground">
+              Agenda do WhatsApp e cadastro manual.
+            </p>
+          </div>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Input
+              className="h-9 min-w-0 flex-1 sm:w-56 sm:flex-none"
+              placeholder="Buscar"
+              value={q}
+              onChange={(event) => setQ(event.target.value)}
+            />
           <Button className="h-9 px-3" onClick={() => setModal({})}>
             <Plus />
             Novo
@@ -102,13 +102,13 @@ export function ContatosBoard() {
           {rows.map((row) => (
             <div
               key={row.id}
-              className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+              className="flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <p className="font-medium">{row.name}</p>
                 <p className="text-sm text-muted-foreground">{formatPhone(row.phone)}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   className="h-8 px-2"

@@ -24,10 +24,10 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className="flex min-h-svh bg-background">
+    <div className="flex h-svh overflow-hidden bg-background">
       <AppSidebar allowedModules={allowedModules} homeHref={homeHref} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between gap-3 border-b bg-background/95 px-3 pt-[env(safe-area-inset-top)] backdrop-blur sm:px-6 lg:h-16 lg:pt-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex min-h-14 shrink-0 items-center justify-between gap-3 border-b bg-background/95 px-3 pt-[env(safe-area-inset-top)] backdrop-blur sm:px-6 lg:h-16 lg:pt-0">
           <div className="flex min-w-0 items-center gap-2.5">
             <BrandLogo className="h-9 w-24 shrink-0 lg:hidden" />
             <div className="min-w-0">
@@ -45,10 +45,10 @@ export function AppShell({
         </header>
         <main
           className={cn(
-            "flex-1 overflow-y-auto",
+            "min-h-0 flex-1",
             flush
-              ? "p-0 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0"
-              : "p-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))] sm:p-6 lg:pb-6"
+              ? "overflow-hidden p-0 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0"
+              : "overflow-y-auto p-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))] sm:p-6 lg:pb-6"
           )}
         >
           {children}
