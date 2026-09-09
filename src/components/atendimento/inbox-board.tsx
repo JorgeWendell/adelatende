@@ -392,10 +392,14 @@ export function InboxBoard() {
                   variant="destructive"
                   className="h-8 px-2"
                   onClick={async () => {
-                    await setConversaStatus({
+                    const result = await setConversaStatus({
                       conversationId: active.id,
                       status: "closed",
                     });
+                    if (result.serverError) {
+                      toast.error(result.serverError);
+                      return;
+                    }
                     setActiveId(null);
                     setActive(null);
                     await loadList();
@@ -406,24 +410,26 @@ export function InboxBoard() {
                 </Button>
               </div>
             </div>
-            <ScrollArea className="min-h-0 flex-1 px-4 py-3">
-              <div className="grid gap-2">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "max-w-[80%] rounded-2xl px-3 py-2 text-sm",
-                      message.direction === "out"
-                        ? "ml-auto bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    )}
-                  >
-                    <p className="whitespace-pre-wrap">{message.body || message.type}</p>
-                  </div>
-                ))}
-                <div ref={bottomRef} />
-              </div>
-            </ScrollArea>
+            <div className="wa-chat-bg min-h-0 flex-1">
+              <ScrollArea className="h-full min-h-0 bg-transparent px-4 py-3">
+                <div className="grid gap-2">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={cn(
+                        "max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm",
+                        message.direction === "out"
+                          ? "ml-auto bg-primary text-primary-foreground"
+                          : "bg-white/95 text-foreground dark:bg-zinc-800/90"
+                      )}
+                    >
+                      <p className="whitespace-pre-wrap">{message.body || message.type}</p>
+                    </div>
+                  ))}
+                  <div ref={bottomRef} />
+                </div>
+              </ScrollArea>
+            </div>
             <form onSubmit={handleSend} className="border-t p-3">
               <div className="flex items-end gap-2">
                 <label className="grid size-9 place-items-center rounded-lg border text-muted-foreground">

@@ -202,6 +202,56 @@ export const setConversaStatus = moduleAction("atendimento")
       return { ok: true };
     }
 
+    if (parsedInput.status === "closed") {
+      const [conversation] = await db
+        .select({
+          id: waConversation.id,
+          contactJid: waContact.jid,
+          instance: waConnection.evolutionInstance,
+        })
+        .from(waConversation)
+        .innerJoin(waContact, eq(waConversation.contactId, waContact.id))
+        .innerJoin(waConnection, eq(waConversation.connectionId, waConnection.id))
+        .where(
+          and(
+            eq(waConversation.id, parsedInput.conversationId),
+            eq(waConversation.organizationId, ctx.organizationId)
+          )
+        )
+        .limit(1);
+
+      if (!conversation) {
+        throw new ActionError("Conversa não encontrada.");
+      }
+
+      const farewell =
+        "Atendimento encerrado, se precisar de algo entre em contato conosco, tenha um excelente dia!";
+      const number = phoneFromJid(conversation.contactJid);
+
+      await sendEvolutionText(conversation.instance, number, farewell);
+      await insertMessage({
+        organizationId: ctx.organizationId,
+        conversationId: conversation.id,
+        direction: "out",
+        type: "text",
+        body: farewell,
+        fromMe: true,
+      });
+
+      await db
+        .update(waConversation)
+        .set({
+          status: "closed",
+          lastMessageAt: new Date(),
+          lastMessagePreview: previewFromBody(farewell, "text"),
+          unreadCount: 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(waConversation.id, conversation.id));
+
+      return { ok: true };
+    }
+
     await db
       .update(waConversation)
       .set({
